@@ -2,6 +2,8 @@
 
 ## 1\. 核心业务流程图
 
+![image-20260612181533341](C:/Users/Pamela/AppData/Roaming/Typora/typora-user-images/image-20260612181533341.png)
+
 ```mermaid
 flowchart TD
     A[用户注册/登录] --> B[学情初始化<br>（填写备考信息+核心痛点）]
