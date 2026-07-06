@@ -71,7 +71,7 @@ function showTooltip(index, event) {
   const dim = props.dimensions[index]
   if (!dim) return
   tooltipContent.value = `${dim.name}<br/>得分: ${dim.score}/10`
-  
+
   const rect = chartEl.value.getBoundingClientRect()
   tooltipX.value = event.offsetX
   tooltipY.value = event.offsetY
@@ -106,32 +106,32 @@ function resize() {
 <template>
   <div class="radar-wrapper">
     <div ref="chartEl" class="radar-chart" />
-    
+
     <div class="radar-overlay">
-      <div 
-        class="quadrant quadrant-top" 
-        @mouseenter="(e) => showTooltip(0, e)" 
+      <div
+        class="quadrant quadrant-top"
+        @mouseenter="(e) => showTooltip(0, e)"
         @mouseleave="hideTooltip"
       />
-      <div 
-        class="quadrant quadrant-right" 
-        @mouseenter="(e) => showTooltip(3, e)" 
+      <div
+        class="quadrant quadrant-right"
+        @mouseenter="(e) => showTooltip(3, e)"
         @mouseleave="hideTooltip"
       />
-      <div 
-        class="quadrant quadrant-bottom" 
-        @mouseenter="(e) => showTooltip(2, e)" 
+      <div
+        class="quadrant quadrant-bottom"
+        @mouseenter="(e) => showTooltip(2, e)"
         @mouseleave="hideTooltip"
       />
-      <div 
-        class="quadrant quadrant-left" 
-        @mouseenter="(e) => showTooltip(1, e)" 
+      <div
+        class="quadrant quadrant-left"
+        @mouseenter="(e) => showTooltip(1, e)"
         @mouseleave="hideTooltip"
       />
     </div>
-    
-    <div 
-      v-if="tooltipVisible" 
+
+    <div
+      v-if="tooltipVisible"
       class="radar-tooltip"
       :style="{ left: tooltipX + 'px', top: tooltipY + 'px' }"
       v-html="tooltipContent"

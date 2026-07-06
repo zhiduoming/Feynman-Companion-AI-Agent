@@ -1,10 +1,21 @@
-node_modules
-dist
-dist-ssr
+node_modules/
+dist/
+dist-ssr/
 .vscode/*
 !.vscode/extensions.json
+
 .DS_Store
-*.local
+.idea/
+.claude/
+.venv/
+__pycache__/
+.pytest_cache/
+.python_cache/
+
 *.log
+
+# Local secrets
+.env
 .env.local
 .env.*.local
+*.local

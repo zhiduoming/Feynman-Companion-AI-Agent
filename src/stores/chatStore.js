@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { v4 as uuidv4 } from 'uuid'
-import { chatWithAgent, fetchGreeting } from '@/api/feynman'
+import { chatWithAgent, fetchGreeting, resetFeynmanSession } from '@/api/feynman'
 
 /**
  * 消息结构
@@ -44,7 +44,7 @@ export const useChatStore = defineStore('chat', {
      */
     async bootstrap() {
       // 每次进入都重置一次，避免热更新后状态错位
-      this.resetSession()
+      this.resetLocalState()
       try {
         const greeting = await fetchGreeting()
         this.pushMessage('ai', greeting.reply_text)
@@ -103,10 +103,10 @@ export const useChatStore = defineStore('chat', {
           finalReport: final_report || null
         }
         // 报告就绪后保持锁定，开放"重新开始"
-      } else if (next_action === 'follow_up') {
+      } else if (next_action === 'follow_up' || next_action === 'guide_topic') {
         this.isLocked = false
       } else {
-        // 未知 action：保守解锁，避免页面卡死
+        this.pushMessage('system', `未知动作：${next_action}`)
         this.isLocked = false
       }
     },
@@ -128,6 +128,18 @@ export const useChatStore = defineStore('chat', {
      * 重新开始：清空状态、换 sessionId、重新拉问候语
      */
     async resetSession() {
+      const oldSessionId = this.sessionId
+      if (oldSessionId) {
+        try {
+          await resetFeynmanSession(oldSessionId)
+        } catch (e) {
+          this.errorMsg = e.message || '重置会话失败'
+        }
+      }
+      this.resetLocalState()
+    },
+
+    resetLocalState() {
       this.sessionId = uuidv4()
       this.messages = []
       this.isLocked = false

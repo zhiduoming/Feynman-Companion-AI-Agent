@@ -45,7 +45,7 @@ defineEmits(['click'])
         </defs>
       </svg>
     </div>
-    
+
     <div class="report-card">
       <div class="card-header">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
@@ -54,16 +54,16 @@ defineEmits(['click'])
         </svg>
         <span class="card-header-title">本次费曼训练已完成</span>
       </div>
-      
+
       <div class="card-body">
         <div class="score-row">
           <span class="score-num">{{ cardPreview.total_score }}</span>
           <span class="score-total">/ 40</span>
           <div class="score-desc">综合评分</div>
         </div>
-        
+
         <div class="divider"></div>
-        
+
         <div class="error-item">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <circle cx="7" cy="7" r="6" stroke="#FE9A00" stroke-width="1.28"/>
@@ -75,7 +75,7 @@ defineEmits(['click'])
             <div class="error-name">{{ cardPreview.summary }}</div>
           </div>
         </div>
-        
+
         <button class="card-btn" @click="$emit('click')">
           <span>查看完整四维诊断</span>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

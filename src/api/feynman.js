@@ -51,8 +51,18 @@ export async function fetchGreeting() {
     await delay(400)
     return MOCK_GREETING.data
   }
-  // 真实联调时如有专属接口，在这里替换
   const data = await http.get('/feynman/greeting')
+  return data?.data
+}
+
+export async function resetFeynmanSession(sessionId) {
+  if (USE_MOCK) {
+    mockCallCount.delete(sessionId)
+    return { session_id: sessionId, reset: true }
+  }
+  const data = await http.post('/feynman/reset', {
+    session_id: sessionId
+  })
   return data?.data
 }
 
