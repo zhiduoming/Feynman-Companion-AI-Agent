@@ -59,6 +59,16 @@ class ResetSessionData(BaseModel):
     reset: bool
 
 
+class GreetingData(BaseModel):
+    reply_text: str = Field(..., min_length=1)
+
+
+class GreetingResponse(BaseModel):
+    code: int
+    msg: str
+    data: GreetingData
+
+
 class ResetSessionResponse(BaseModel):
     code: int
     msg: str

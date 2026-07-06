@@ -32,6 +32,7 @@ LLM_PROVIDER=mock
 ## API
 
 - `GET /health`
+- `GET /api/v1/feynman/greeting`
 - `POST /api/v1/feynman/chat`
 - `POST /api/v1/feynman/reset`
 - `GET /api/v1/feynman/session/{session_id}`

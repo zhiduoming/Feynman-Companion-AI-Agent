@@ -28,7 +28,27 @@ GET /health
 
 前端一般不需要调用；联调时可以用来确认后端是否启动、DeepSeek 配置是否读取成功。
 
-## 2. 费曼对话接口
+## 2. 初始引导语
+
+```http
+GET /api/v1/feynman/greeting
+```
+
+示例响应：
+
+```json
+{
+  "code": 200,
+  "msg": "success",
+  "data": {
+    "reply_text": "请你向我讲解一下 Dijkstra 算法的核心原理，讲得越详细越好。"
+  }
+}
+```
+
+前端处理：页面初始化时展示为第一条 AI 气泡。
+
+## 3. 费曼对话接口
 
 ```http
 POST /api/v1/feynman/chat
@@ -152,7 +172,7 @@ Content-Type: application/json
 }
 ```
 
-## 3. 重置会话
+## 4. 重置会话
 
 用于前端“重新开始”按钮。
 
@@ -184,7 +204,7 @@ Content-Type: application/json
 
 前端处理：清空聊天区，重新展示初始引导语，解锁输入框。
 
-## 4. Session 调试接口
+## 5. Session 调试接口
 
 仅用于开发联调，不建议展示给用户。
 

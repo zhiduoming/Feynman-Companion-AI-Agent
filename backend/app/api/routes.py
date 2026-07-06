@@ -3,14 +3,26 @@ from fastapi import APIRouter, HTTPException
 from backend.app.models.feynman import (
     ApiResponse,
     FeynmanChatRequest,
+    GreetingData,
+    GreetingResponse,
     ResetSessionRequest,
     ResetSessionResponse,
     SessionDebugResponse,
 )
+from backend.app.services.knowledge_base import INITIAL_GUIDE_TEXT
 from backend.app.services.feynman_service import get_feynman_service
 
 
 router = APIRouter(prefix="/feynman", tags=["feynman"])
+
+
+@router.get("/greeting", response_model=GreetingResponse)
+async def greeting():
+    return GreetingResponse(
+        code=200,
+        msg="success",
+        data=GreetingData(reply_text=INITIAL_GUIDE_TEXT),
+    )
 
 
 @router.post("/chat", response_model=ApiResponse)

@@ -1,5 +1,8 @@
 import unittest
 
+from fastapi.testclient import TestClient
+
+from backend.app.main import app
 from backend.app.models.feynman import FeynmanChatRequest, NextAction, ResetSessionRequest
 from backend.app.services.feynman_service import FeynmanService
 from backend.app.services.mock_llm import MockLLMClient
@@ -91,6 +94,16 @@ class FeynmanServiceTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(debug.exists)
         self.assertEqual(debug.follow_up_count, 0)
         self.assertEqual(debug.message_count, 0)
+
+
+class FeynmanApiTest(unittest.TestCase):
+    def test_greeting_endpoint(self):
+        client = TestClient(app)
+        response = client.get("/api/v1/feynman/greeting")
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["code"], 200)
+        self.assertIn("reply_text", body["data"])
 
 
 if __name__ == "__main__":
