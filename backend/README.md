@@ -8,19 +8,26 @@ Minimal FastAPI backend for the week-3 Feynman companion demo.
 cd /Users/chen/Code/Feynman-Companion-AI-Agent
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ## Local Env
 
-`.env.local` is ignored by Git. Fill only the API key:
+`.env.local` is ignored by Git. Copy the example file first:
+
+```bash
+cp .env.local.example .env.local
+```
+
+Then fill your own DeepSeek API key:
 
 ```env
 DEEPSEEK_API_KEY=your_key_here
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-chat
 LLM_PROVIDER=deepseek
+REQUEST_TIMEOUT_SECONDS=45
 ```
 
 Use mock mode without a model call:
@@ -47,3 +54,11 @@ Request:
 ```
 
 See `docs/backend-api.md` for frontend integration details.
+
+## Test
+
+```bash
+cd /Users/chen/Code/Feynman-Companion-AI-Agent
+source .venv/bin/activate
+pytest -q backend/tests
+```

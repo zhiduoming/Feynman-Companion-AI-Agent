@@ -44,9 +44,17 @@ def get_settings() -> Settings:
     def pick(name: str, default: str = "") -> str:
         return os.getenv(name) or file_values.get(name) or default
 
+    def pick_float(name: str, default: float) -> float:
+        raw_value = pick(name, str(default))
+        try:
+            return float(raw_value)
+        except ValueError:
+            return default
+
     return Settings(
         llm_provider=pick("LLM_PROVIDER", "mock").lower(),
         deepseek_api_key=pick("DEEPSEEK_API_KEY", ""),
         deepseek_base_url=pick("DEEPSEEK_BASE_URL", "https://api.deepseek.com").rstrip("/"),
         deepseek_model=pick("DEEPSEEK_MODEL", "deepseek-chat"),
+        request_timeout_seconds=pick_float("REQUEST_TIMEOUT_SECONDS", 15.0),
     )

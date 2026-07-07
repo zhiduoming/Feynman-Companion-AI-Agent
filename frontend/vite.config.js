@@ -13,7 +13,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
-    // 后端联调时把 /api 转发到 LangGraph 服务
+    // 后端联调时把 /api 转发到 FastAPI 服务
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',

@@ -1,61 +1,92 @@
-# 费曼伴学 · 智能体（前端 MVP）
+# Feynman Companion AI Agent
 
-基于 Vue3 + Vite + Pinia 的单屏沉浸式对话窗口。
+费曼伴学智能体 demo 仓库，当前采用前后端同仓管理：
 
-## 启动
+- `frontend/`: Vue 3 + Vite + Pinia 聊天界面
+- `backend/`: FastAPI 后端服务、DeepSeek 调用、会话状态与测试
+- `docs/`: 产品需求、接口文档和项目资料
+
+## Quick Start
+
+### 1. Start Backend
 
 ```bash
+cd /Users/chen/Code/Feynman-Companion-AI-Agent
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+后端默认监听 `http://localhost:8000`，Swagger 文档在 `http://localhost:8000/docs`。
+
+本地 DeepSeek 配置仍然放在根目录 `.env.local`，该文件不会提交到 Git。组员第一次启动前可以先复制示例文件：
+
+```bash
+cp .env.local.example .env.local
+```
+
+然后在 `.env.local` 里填自己的 DeepSeek API key：
+
+```env
+DEEPSEEK_API_KEY=your_key_here
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-chat
+LLM_PROVIDER=deepseek
+REQUEST_TIMEOUT_SECONDS=45
+```
+
+### 2. Start Frontend
+
+```bash
+cd /Users/chen/Code/Feynman-Companion-AI-Agent/frontend
 npm install
 npm run dev
 ```
 
-默认监听 http://localhost:5173
+前端默认监听 `http://localhost:5173`，开发环境会把 `/api` 代理到 `http://127.0.0.1:8000`。
 
-## 切换 Mock / 真实接口
+## Project Layout
 
-修改 `.env.development`：
-
-```ini
-VITE_USE_MOCK=true   # 走本地 mock（首期默认）
-VITE_USE_MOCK=false  # 调真实后端 /api/v1/feynman/chat
+```text
+Feynman-Companion-AI-Agent/
+├── backend/
+│   ├── app/                  # FastAPI application code
+│   ├── scripts/              # Backend helper scripts
+│   ├── tests/                # Backend tests
+│   ├── requirements.txt      # Python dependencies
+│   └── README.md
+├── frontend/
+│   ├── src/                  # Vue frontend source code
+│   ├── package.json          # Frontend dependencies and scripts
+│   ├── vite.config.js        # Vite dev server and proxy config
+│   ├── .env.development      # Frontend development env
+│   └── README.md
+├── docs/
+│   └── backend-api.md        # Frontend-backend API contract
+├── .env.local.example        # Local backend env template
+├── .env.local                # Local backend secrets, ignored by Git
+└── README.md
 ```
 
-`vite.config.js` 中已配置 `/api` 代理到 `http://127.0.0.1:8000`，后端联调时改这里即可。
+## Useful Commands
 
-## 目录结构
+```bash
+# Backend tests
+source .venv/bin/activate
+pytest -q backend/tests
 
-```
-src/
-├── api/                # 接口层 + Mock 数据
-│   ├── feynman.js
-│   └── mockData.js
-├── components/         # 5 个核心组件
-│   ├── ChatInput.vue
-│   ├── LoadingBubble.vue
-│   ├── MessageBubble.vue
-│   ├── RadarChart.vue
-│   ├── ReportCard.vue
-│   └── ReportDrawer.vue
-├── stores/
-│   └── chatStore.js    # Pinia 状态机
-├── styles/
-│   └── global.css
-├── views/
-│   └── ChatView.vue    # 单屏主页面
-├── App.vue
-└── main.js
+# Frontend production build
+cd frontend
+npm run build
 ```
 
-## Mock 行为
+## Demo Flow
 
-- 首屏：自动下发引导问题
-- 用户第 1、2 次发送：返回追问
-- 用户第 3 次发送：返回 `generate_report`，触发卡片 + 抽屉
-- 真实后端：完全按契约返回，前端不感知轮次
+1. 前端页面初始化时请求 `GET /api/v1/feynman/greeting`。
+2. 用户输入讲解后，前端请求 `POST /api/v1/feynman/chat`。
+3. 后端围绕 Dijkstra 算法进行追问，最多 3 轮正式追问。
+4. 达到报告条件后，后端返回 `generate_report`，前端展示诊断报告。
+5. 用户点击重新开始时，前端请求 `POST /api/v1/feynman/reset`。
 
-## 后续 TODO
-
-- [ ] 接入真实后端（关掉 `VITE_USE_MOCK`）
-- [ ] ECharts 雷达图样式微调
-- [ ] 移动端细调
-- [ ] Markdown 渲染（AI 气泡 / deep_analysis 字段）
+详细接口见 `docs/backend-api.md`。
