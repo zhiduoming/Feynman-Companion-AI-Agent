@@ -8,6 +8,7 @@ from backend.app.models.feynman import (
     FeynmanChatData,
     NextAction,
 )
+from backend.app.services.kp_provider import KnowledgePoint
 
 
 class MockLLMClient:
@@ -17,13 +18,23 @@ class MockLLMClient:
         user_input: str,
         follow_up_count: int,
         max_follow_ups: int,
+        knowledge_point: KnowledgePoint,
     ) -> FeynmanChatData:
         text = _normalize(user_input)
         all_text = _normalize(" ".join([message.content for message in messages] + [user_input]))
+
+        if knowledge_point.kp_id != "kp-demo":
+            return _evaluate_generic(
+                text=all_text,
+                follow_up_count=follow_up_count,
+                max_follow_ups=max_follow_ups,
+                knowledge_point=knowledge_point,
+            )
+
         coverage = _coverage(all_text)
 
         if follow_up_count >= max_follow_ups or _is_complete(coverage):
-            return _build_report(all_text, coverage)
+            return _build_report(all_text, coverage, knowledge_point.name)
 
         if not coverage["non_negative"]:
             return FeynmanChatData(
@@ -46,7 +57,79 @@ class MockLLMClient:
                 reply_text="操作步骤我大概明白了，但为什么当前距离最小的未访问节点就可以确定为最短路了？",
             )
 
-        return _build_report(text, coverage)
+        return _build_report(text, coverage, knowledge_point.name)
+
+
+def _evaluate_generic(
+    text: str,
+    follow_up_count: int,
+    max_follow_ups: int,
+    knowledge_point: KnowledgePoint,
+) -> FeynmanChatData:
+    if follow_up_count >= max_follow_ups:
+        return _build_generic_report(text, knowledge_point.name)
+
+    dimension_keys = [
+        "concept_prerequisite",
+        "core_mechanism",
+        "principle_proof",
+    ]
+    dimension = knowledge_point.rubric.get(dimension_keys[min(follow_up_count, 2)], {})
+    dimension_name = dimension.get("name", "核心原理")
+    return FeynmanChatData(
+        next_action=NextAction.FOLLOW_UP,
+        reply_text=(
+            f"关于{knowledge_point.name}的“{dimension_name}”，你能再解释得具体一点吗？"
+            "尽量说明条件、过程以及为什么成立。"
+        ),
+    )
+
+
+def _build_generic_report(text: str, kp_name: str) -> FeynmanChatData:
+    understanding = min(10, 3 + len(text) // 25)
+    completeness = min(10, 3 + len(text) // 30)
+    logic = min(10, 4 + len(text) // 40)
+    structure = min(10, 4 + len(text) // 35)
+    total = understanding + completeness + logic + structure
+    dimensions = [
+        DimensionReport(
+            name="理解深度",
+            score=understanding,
+            analysis=f"你已经表达了对{kp_name}的部分理解，但关键条件和原理依据仍可补充。",
+            suggestion="继续说明这个知识点在什么条件下成立，以及核心过程为什么有效。",
+        ),
+        DimensionReport(
+            name="表达完整性",
+            score=completeness,
+            analysis="讲解覆盖了部分关键内容，但概念前提、核心机制和常见误区还没有全部串起来。",
+            suggestion="对照“概念前提-核心机制-原理依据-常见误区”逐项检查遗漏。",
+        ),
+        DimensionReport(
+            name="逻辑连贯性",
+            score=logic,
+            analysis="目前能够描述主要结论，但结论与原因之间的因果连接还不够充分。",
+            suggestion="每说一个步骤或结论，都补一句它依赖什么条件、解决什么问题。",
+        ),
+        DimensionReport(
+            name="结构化能力",
+            score=structure,
+            analysis="表达已形成基本顺序，但还可以进一步分层。",
+            suggestion="先讲用途和前提，再讲过程，最后解释正确性与易错点。",
+        ),
+    ]
+    summary = "理解较完整，逻辑较清楚" if total >= 32 else "核心理解仍需补强"
+    return FeynmanChatData(
+        next_action=NextAction.GENERATE_REPORT,
+        reply_text="这轮讲解先到这里，我给你整理了一份诊断报告。",
+        card_preview=CardPreview(total_score=total, summary=summary),
+        final_report=FinalReport(
+            dimensions=dimensions,
+            overall_comment=(
+                f"本次讲解体现了你对{kp_name}的初步理解。下一步要把概念前提、"
+                "核心机制和原理依据连成一条完整的解释链。"
+            ),
+        ),
+    )
 
 
 def _normalize(text: str) -> str:
@@ -66,7 +149,7 @@ def _is_complete(coverage: dict[str, bool]) -> bool:
     return all(coverage.values())
 
 
-def _build_report(text: str, coverage: dict[str, bool]) -> FeynmanChatData:
+def _build_report(text: str, coverage: dict[str, bool], kp_name: str) -> FeynmanChatData:
     covered_count = sum(1 for value in coverage.values() if value)
     understanding = min(10, 2 + covered_count * 2)
     completeness = min(10, 2 + covered_count * 2)
@@ -115,8 +198,8 @@ def _build_report(text: str, coverage: dict[str, bool]) -> FeynmanChatData:
         final_report=FinalReport(
             dimensions=dimensions,
             overall_comment=(
-                "本次讲解已经能反映你对 Dijkstra 的部分理解。后续重点不是背流程，"
-                "而是把非负权前提、贪心选择和松弛操作之间的因果关系讲清楚。"
+                f"本次讲解已经能反映你对{kp_name}的部分理解。后续重点不是只背步骤，"
+                "而是把适用前提、核心机制和正确性依据之间的因果关系讲清楚。"
             ),
         ),
     )

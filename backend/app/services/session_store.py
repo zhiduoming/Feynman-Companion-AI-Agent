@@ -7,6 +7,10 @@ from backend.app.models.feynman import ChatMessage, FeynmanChatData
 @dataclass
 class SessionState:
     session_id: str
+    kp_id: Optional[str] = None
+    kp_name: Optional[str] = None
+    material_id: Optional[str] = None
+    chapter_id: Optional[str] = None
     follow_up_count: int = 0
     invalid_answer_count: int = 0
     off_topic_count: int = 0

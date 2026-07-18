@@ -17,9 +17,17 @@ npm run dev
 修改 `frontend/.env.development`：
 
 ```ini
-VITE_USE_MOCK=true   # 走本地 mock
-VITE_USE_MOCK=false  # 调真实后端 /api/v1/feynman/*
+# false: greeting/chat/reset 调真实 LangGraph 后端
+VITE_USE_FEYNMAN_MOCK=false
+
+# true: 上传、教材树、KP 接口暂时使用前端 Mock
+VITE_USE_MATERIAL_MOCK=true
+
+# 前端等待时间要大于后端 DeepSeek 超时，给 Mock 兜底留出返回时间
+VITE_API_TIMEOUT_MS=60000
 ```
+
+`VITE_USE_MOCK` 仅作为旧配置的兼容回退。新配置应分别设置两个开关，避免教材后端尚未接入时阻塞真实 Feynman 对话联调。
 
 `frontend/vite.config.js` 中已配置 `/api` 代理到 `http://127.0.0.1:8000`。
 

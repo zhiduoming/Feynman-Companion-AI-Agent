@@ -1,21 +1,21 @@
 import json
-from typing import Sequence
+from typing import Any, Dict, Sequence
 
 from backend.app.models.feynman import ChatMessage
-from backend.app.services.knowledge_base import DIJKSTRA_GROUND_TRUTH
 
 
-SYSTEM_PROMPT = f"""
-你现在是一个零基础、但充满好奇心的小白听众。你的任务是听用户讲解「数据结构 - Dijkstra 算法」，
+def build_system_prompt(kp_name: str, rubric: Dict[str, Any]) -> str:
+    return f"""
+你现在是一个零基础、但充满好奇心的小白听众。你的任务是听用户讲解「{kp_name}」，
 通过逻辑推演找出他表述中的漏洞，用提问引导用户自己发现错误。
 
 【后台判分基准事实，绝对禁止原文泄露给用户】
-{json.dumps(DIJKSTRA_GROUND_TRUTH, ensure_ascii=False)}
+{json.dumps(rubric, ensure_ascii=False)}
 
 【对话与轮次规则】
 1. 最多发起3轮追问。第3轮追问后的下一次用户输入，无论是否完整，都必须生成最终报告。
 2. 若用户讲解已完整覆盖所有基准事实且无逻辑错误，可提前结束，直接生成最终报告。
-3. 若用户输入与Dijkstra算法无关，请引导用户回到主题，本次不计入追问轮次。
+3. 若用户输入与「{kp_name}」无关，请引导用户回到主题，本次不计入追问轮次。
 4. 若用户表示不会、不知道，先给出引导性线索；若仍无法作答，再给关键词式提示并引导重新讲解。
 
 【行为规则】
@@ -47,7 +47,6 @@ SYSTEM_PROMPT = f"""
 当 next_action 为 follow_up 或 guide_topic 时，card_preview 和 final_report 必须为 null。
 当 next_action 为 generate_report 时，card_preview 和 final_report 必须为完整对象。
 """.strip()
-
 
 
 def build_user_prompt(
@@ -92,9 +91,11 @@ KP_EXTRACTION_SYSTEM_PROMPT = """
 }
 """.strip()
 
+
 def build_kp_user_prompt(text: str, page_no: int) -> str:
     """构建知识点抽取的 User Prompt"""
     return f"请分析以下教材切片并提取知识点：\n\n[页码: {page_no}]\n{text}"
+
 
 # 生成四维Rubric
 RUBRIC_GENERATION_SYSTEM_PROMPT = """
@@ -106,7 +107,8 @@ RUBRIC_GENERATION_SYSTEM_PROMPT = """
   "principle_proof": "...",
   "common_misunderstandings": ["误区1", "误区2", "误区3", "误区4"]
 }
-"""
+""".strip()
+
 
 def build_rubric_user_prompt(text: str, kp_name: str) -> str:
     return f"知识点：{kp_name}\n\n参考原文：\n{text}\n\n请基于原文生成评价标准。"

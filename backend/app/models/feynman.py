@@ -12,6 +12,7 @@ class NextAction(str, Enum):
 
 class FeynmanChatRequest(BaseModel):
     session_id: str = Field(..., min_length=1)
+    kp_id: Optional[str] = Field(default=None, min_length=1)
     user_input: str = Field(..., min_length=1, max_length=500)
 
 
@@ -61,6 +62,8 @@ class ResetSessionData(BaseModel):
 
 class GreetingData(BaseModel):
     reply_text: str = Field(..., min_length=1)
+    kp_id: str
+    kp_name: str
 
 
 class GreetingResponse(BaseModel):
@@ -85,6 +88,10 @@ class SessionDebugData(BaseModel):
     message_count: int = 0
     last_provider: str = "none"
     fallback_used: bool = False
+    kp_id: Optional[str] = None
+    kp_name: Optional[str] = None
+    material_id: Optional[str] = None
+    chapter_id: Optional[str] = None
     recent_messages: List[ChatMessage] = Field(default_factory=list)
 
 

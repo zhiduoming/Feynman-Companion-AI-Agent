@@ -9,11 +9,13 @@ dist-ssr/
 .idea/
 .claude/
 .venv/
+.venv-*/
 __pycache__/
 .pytest_cache/
 .python_cache/
 
 *.log
+feynman.db
 
 # Local secrets
 .env
