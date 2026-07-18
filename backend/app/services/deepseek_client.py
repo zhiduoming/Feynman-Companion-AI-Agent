@@ -5,8 +5,16 @@ import httpx
 
 from backend.app.core.config import Settings
 from backend.app.models.feynman import ChatMessage, FeynmanChatData
+from backend.app.models.knowledge import KPExtractionResponse
 from backend.app.services.kp_provider import KnowledgePoint
-from backend.app.services.prompts import build_system_prompt, build_user_prompt
+from backend.app.services.prompts import (
+    KP_EXTRACTION_SYSTEM_PROMPT,
+    RUBRIC_GENERATION_SYSTEM_PROMPT,
+    build_kp_user_prompt,
+    build_rubric_user_prompt,
+    build_system_prompt,
+    build_user_prompt,
+)
 
 
 class DeepSeekClient:
@@ -21,33 +29,46 @@ class DeepSeekClient:
         max_follow_ups: int,
         knowledge_point: KnowledgePoint,
     ) -> FeynmanChatData:
+        parsed = await self._request_json(
+            system_prompt=build_system_prompt(
+                kp_name=knowledge_point.name,
+                rubric=knowledge_point.rubric,
+            ),
+            user_prompt=build_user_prompt(
+                messages=messages,
+                user_input=user_input,
+                follow_up_count=follow_up_count,
+                max_follow_ups=max_follow_ups,
+            ),
+        )
+        return FeynmanChatData.model_validate(parsed)
+
+    async def extract_knowledge(self, chunk_text: str, page_no: int) -> KPExtractionResponse:
+        parsed = await self._request_json(
+            system_prompt=KP_EXTRACTION_SYSTEM_PROMPT,
+            user_prompt=build_kp_user_prompt(chunk_text, page_no),
+        )
+        return KPExtractionResponse.model_validate(parsed)
+
+    async def generate_rubric(self, source_text: str, kp_name: str) -> dict[str, Any]:
+        return await self._request_json(
+            system_prompt=RUBRIC_GENERATION_SYSTEM_PROMPT,
+            user_prompt=build_rubric_user_prompt(source_text, kp_name),
+        )
+
+    async def _request_json(self, system_prompt: str, user_prompt: str) -> dict[str, Any]:
         if not self._settings.deepseek_configured:
             raise RuntimeError("DeepSeek API key is not configured.")
 
         payload = {
             "model": self._settings.deepseek_model,
             "messages": [
-                {
-                    "role": "system",
-                    "content": build_system_prompt(
-                        kp_name=knowledge_point.name,
-                        rubric=knowledge_point.rubric,
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": build_user_prompt(
-                        messages=messages,
-                        user_input=user_input,
-                        follow_up_count=follow_up_count,
-                        max_follow_ups=max_follow_ups,
-                    ),
-                },
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
             ],
             "temperature": 0.2,
             "response_format": {"type": "json_object"},
         }
-
         headers = {
             "Authorization": f"Bearer {self._settings.deepseek_api_key}",
             "Content-Type": "application/json",
@@ -63,8 +84,7 @@ class DeepSeekClient:
             data = response.json()
 
         content = data["choices"][0]["message"]["content"]
-        parsed = _parse_json_object(content)
-        return FeynmanChatData.model_validate(parsed)
+        return _parse_json_object(content)
 
 
 def _parse_json_object(content: str) -> dict[str, Any]:
