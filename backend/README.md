@@ -1,15 +1,17 @@
-# Feynman Companion Backend MVP
+# Feynman Companion Backend
 
-Minimal FastAPI backend for the week-3 Feynman companion demo.
+FastAPI backend for the Feynman companion demo. The week-4 conversation runtime is implemented as a LangGraph workflow and binds each session to a knowledge point.
+
+Runtime requirement: Python 3.13.
 
 ## Run
 
 ```bash
 cd /Users/chen/Code/Feynman-Companion-AI-Agent
-python3 -m venv .venv
+/opt/homebrew/bin/python3.13 -m venv .venv
 source .venv/bin/activate
-pip install -r backend/requirements.txt
-uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
+python -m pip install -r backend/requirements.txt
+python -m uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ## Local Env
@@ -27,7 +29,7 @@ DEEPSEEK_API_KEY=your_key_here
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-chat
 LLM_PROVIDER=deepseek
-REQUEST_TIMEOUT_SECONDS=45
+REQUEST_TIMEOUT_SECONDS=30
 ```
 
 Use mock mode without a model call:
@@ -39,7 +41,7 @@ LLM_PROVIDER=mock
 ## API
 
 - `GET /health`
-- `GET /api/v1/feynman/greeting`
+- `GET /api/v1/feynman/greeting?kp_id=kp-demo`
 - `POST /api/v1/feynman/chat`
 - `POST /api/v1/feynman/reset`
 - `GET /api/v1/feynman/session/{session_id}`
@@ -49,8 +51,19 @@ Request:
 ```json
 {
   "session_id": "uuid-string",
+  "kp_id": "kp-demo",
   "user_input": "用户对 Dijkstra 算法的讲解"
 }
+```
+
+`kp-demo` and `kp-demo2` are temporary mock knowledge points. Omitting `kp_id` falls back to `kp-demo` for week-3 compatibility. A session cannot switch knowledge points after the conversation starts; call `/reset` first.
+
+The runtime graph is:
+
+```text
+START -> load_context -> route_input
+route_input -> kp_missing | off_topic | ineffective | evaluate | report
+all branches -> persist_session -> END
 ```
 
 See `docs/backend-api.md` for frontend integration details.
@@ -60,5 +73,5 @@ See `docs/backend-api.md` for frontend integration details.
 ```bash
 cd /Users/chen/Code/Feynman-Companion-AI-Agent
 source .venv/bin/activate
-pytest -q backend/tests
+python -m pytest -q backend/tests
 ```

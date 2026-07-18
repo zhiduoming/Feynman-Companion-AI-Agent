@@ -1,0 +1,76 @@
+from copy import deepcopy
+from typing import Any, Dict, Optional, Protocol
+
+from pydantic import BaseModel
+
+from backend.app.services.knowledge_base import DIJKSTRA_GROUND_TRUTH
+
+
+DEFAULT_KP_ID = "kp-demo"
+
+
+class KnowledgePoint(BaseModel):
+    kp_id: str
+    name: str
+    summary: str
+    rubric: Dict[str, Any]
+    material_id: str
+    chapter_id: str
+
+
+class KnowledgePointProvider(Protocol):
+    def get(self, kp_id: str) -> Optional[KnowledgePoint]:
+        ...
+
+
+class MockKnowledgePointProvider:
+    """Temporary adapter for Backend A's future SQLite knowledge-point store."""
+
+    def __init__(self) -> None:
+        self._items = {
+            DEFAULT_KP_ID: KnowledgePoint(
+                kp_id=DEFAULT_KP_ID,
+                name="Dijkstra 算法",
+                summary="非负权图求单源最短路径的贪心算法",
+                rubric=deepcopy(DIJKSTRA_GROUND_TRUTH["ground_truth"]),
+                material_id="mat-demo",
+                chapter_id="ch-demo",
+            ),
+            "kp-demo2": KnowledgePoint(
+                kp_id="kp-demo2",
+                name="Floyd 算法",
+                summary="通过动态规划求解全源最短路径",
+                rubric={
+                    "concept_prerequisite": {
+                        "name": "概念前提",
+                        "content": "Floyd 算法用于求所有顶点对之间的最短路径，允许负权边，但不能存在负权环。",
+                    },
+                    "core_mechanism": {
+                        "name": "核心机制",
+                        "content": "动态规划状态表示只允许经过前 k 个顶点时两点间的最短距离，并逐步扩大中间点集合。",
+                    },
+                    "principle_proof": {
+                        "name": "原理证明",
+                        "content": "最短路径要么不经过第 k 个顶点，要么可拆成经过 k 的两段最短路径。",
+                    },
+                    "common_misunderstandings": {
+                        "name": "常见误区",
+                        "content": [
+                            "误以为 Floyd 不能处理任何负权边",
+                            "混淆中间点和路径端点",
+                            "原地更新时写错三层循环中 k 的位置",
+                            "忽略负权环会使最短路径无定义",
+                        ],
+                    },
+                },
+                material_id="mat-demo",
+                chapter_id="ch-demo",
+            ),
+        }
+
+    def get(self, kp_id: str) -> Optional[KnowledgePoint]:
+        item = self._items.get(kp_id)
+        return item.model_copy(deep=True) if item is not None else None
+
+
+kp_provider = MockKnowledgePointProvider()

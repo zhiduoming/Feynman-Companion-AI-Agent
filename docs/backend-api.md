@@ -1,13 +1,13 @@
-# 费曼伴学智能体后端接口文档 MVP
+# 费曼伴学智能体后端接口文档
 
-本文档面向前端对接，覆盖第三周 demo 所需的最小后端接口。
+本文档面向前端对接，覆盖第四周 LangGraph 动态知识点对话接口。
 
 ## 基础信息
 
 - 后端地址：`http://localhost:8000`
 - Swagger 文档：`http://localhost:8000/docs`
-- 主要知识点：`Dijkstra 算法`
-- 会话机制：前端页面初始化时生成一个 `session_id`，同一轮对话必须一直使用同一个 `session_id`
+- Mock 知识点：`kp-demo`（Dijkstra）、`kp-demo2`（Floyd）
+- 会话机制：前端页面初始化时生成一个 `session_id`，同一轮对话必须一直使用同一个 `session_id` 和 `kp_id`
 
 ## 1. 健康检查
 
@@ -31,7 +31,7 @@ GET /health
 ## 2. 初始引导语
 
 ```http
-GET /api/v1/feynman/greeting
+GET /api/v1/feynman/greeting?kp_id=kp-demo
 ```
 
 示例响应：
@@ -41,7 +41,9 @@ GET /api/v1/feynman/greeting
   "code": 200,
   "msg": "success",
   "data": {
-    "reply_text": "请你向我讲解一下 Dijkstra 算法的核心原理，讲得越详细越好。"
+    "reply_text": "请你向我讲解一下 Dijkstra 算法的核心原理，讲得越详细越好。",
+    "kp_id": "kp-demo",
+    "kp_name": "Dijkstra 算法"
   }
 }
 ```
@@ -60,6 +62,7 @@ Content-Type: application/json
 ```json
 {
   "session_id": "demo-001",
+  "kp_id": "kp-demo",
   "user_input": "Dijkstra 是用来求图中最短路径的算法。"
 }
 ```
@@ -69,6 +72,7 @@ Content-Type: application/json
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
 | `session_id` | string | 是 | 前端生成的会话 ID。同一轮对话保持不变 |
+| `kp_id` | string | 新流程是 | 当前选择的知识点 ID。同一轮对话保持不变；省略时默认 `kp-demo` 仅用于兼容第三周 |
 | `user_input` | string | 是 | 用户输入内容，最大 500 字 |
 
 ### 响应结构
@@ -228,6 +232,10 @@ GET /api/v1/feynman/session/{session_id}
     "message_count": 4,
     "last_provider": "deepseek",
     "fallback_used": false,
+    "kp_id": "kp-demo",
+    "kp_name": "Dijkstra 算法",
+    "material_id": "mat-demo",
+    "chapter_id": "ch-demo",
     "recent_messages": []
   }
 }
@@ -243,11 +251,15 @@ GET /api/v1/feynman/session/{session_id}
 | `ended` | 是否已经生成最终报告 |
 | `last_provider` | 最近一次响应来源：`deepseek`、`mock`、`rule` |
 | `fallback_used` | DeepSeek 调用失败后是否使用 mock 兜底 |
+| `kp_id` / `kp_name` | 当前会话绑定的知识点 |
+| `material_id` / `chapter_id` | 当前知识点所属教材和章节 |
 
 ## 前端联调注意事项
 
-1. 同一轮对话必须复用同一个 `session_id`。
+1. 同一轮对话必须复用同一个 `session_id` 和 `kp_id`。
 2. 页面刷新或点击“重新开始”时，建议生成新的 `session_id`，或调用 reset 接口。
 3. 请求发出后锁定输入框和发送按钮，接口返回后再根据 `next_action` 决定是否解锁。
 4. `generate_report` 返回后，本轮对话结束，输入框应保持锁定。
 5. `card_preview` 和 `final_report` 只有在 `next_action=generate_report` 时才不是 `null`。
+6. 切换知识点前必须调用 reset 或生成新的 `session_id`，否则后端返回 `session is already bound to another kp_id`。
+7. 若知识点不存在或已删除，chat 返回 `next_action=guide_topic`，前端应跳回知识点选择页。

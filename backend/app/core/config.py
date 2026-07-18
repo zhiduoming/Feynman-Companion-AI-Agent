@@ -28,7 +28,7 @@ class Settings(BaseModel):
     deepseek_api_key: str = ""
     deepseek_base_url: str = "https://api.deepseek.com"
     deepseek_model: str = "deepseek-chat"
-    request_timeout_seconds: float = 15.0
+    request_timeout_seconds: float = 30.0
     max_follow_ups: int = 3
     cors_allow_origins: List[str] = ["*"]
 
@@ -56,5 +56,5 @@ def get_settings() -> Settings:
         deepseek_api_key=pick("DEEPSEEK_API_KEY", ""),
         deepseek_base_url=pick("DEEPSEEK_BASE_URL", "https://api.deepseek.com").rstrip("/"),
         deepseek_model=pick("DEEPSEEK_MODEL", "deepseek-chat"),
-        request_timeout_seconds=pick_float("REQUEST_TIMEOUT_SECONDS", 15.0),
+        request_timeout_seconds=pick_float("REQUEST_TIMEOUT_SECONDS", 30.0),
     )

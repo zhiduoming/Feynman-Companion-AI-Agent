@@ -5,7 +5,8 @@ import httpx
 
 from backend.app.core.config import Settings
 from backend.app.models.feynman import ChatMessage, FeynmanChatData
-from backend.app.services.prompts import SYSTEM_PROMPT, build_user_prompt
+from backend.app.services.kp_provider import KnowledgePoint
+from backend.app.services.prompts import build_system_prompt, build_user_prompt
 
 
 class DeepSeekClient:
@@ -18,6 +19,7 @@ class DeepSeekClient:
         user_input: str,
         follow_up_count: int,
         max_follow_ups: int,
+        knowledge_point: KnowledgePoint,
     ) -> FeynmanChatData:
         if not self._settings.deepseek_configured:
             raise RuntimeError("DeepSeek API key is not configured.")
@@ -25,7 +27,13 @@ class DeepSeekClient:
         payload = {
             "model": self._settings.deepseek_model,
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {
+                    "role": "system",
+                    "content": build_system_prompt(
+                        kp_name=knowledge_point.name,
+                        rubric=knowledge_point.rubric,
+                    ),
+                },
                 {
                     "role": "user",
                     "content": build_user_prompt(

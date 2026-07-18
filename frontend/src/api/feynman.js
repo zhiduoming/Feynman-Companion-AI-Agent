@@ -15,12 +15,19 @@ import {
   MOCK_KP_REGENERATE
 } from './mockData'
 
-const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
+const LEGACY_USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
+const USE_FEYNMAN_MOCK = import.meta.env.VITE_USE_FEYNMAN_MOCK == null
+  ? LEGACY_USE_MOCK
+  : import.meta.env.VITE_USE_FEYNMAN_MOCK === 'true'
+const USE_MATERIAL_MOCK = import.meta.env.VITE_USE_MATERIAL_MOCK == null
+  ? LEGACY_USE_MOCK
+  : import.meta.env.VITE_USE_MATERIAL_MOCK === 'true'
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
+const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS || 60000)
 
 const http = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000,
+  timeout: API_TIMEOUT_MS,
   headers: { 'Content-Type': 'application/json' }
 })
 
@@ -34,7 +41,7 @@ http.interceptors.response.use(
 )
 
 export async function chatWithAgent(sessionId, userInput, kpId) {
-  if (USE_MOCK) {
+  if (USE_FEYNMAN_MOCK) {
     return mockChat(sessionId, userInput)
   }
   const data = await http.post('/feynman/chat', {
@@ -46,7 +53,7 @@ export async function chatWithAgent(sessionId, userInput, kpId) {
 }
 
 export async function fetchGreeting(kpId = null) {
-  if (USE_MOCK) {
+  if (USE_FEYNMAN_MOCK) {
     await delay(400)
     if (kpId) {
       return MOCK_GREETING_DYNAMIC.data
@@ -59,7 +66,7 @@ export async function fetchGreeting(kpId = null) {
 }
 
 export async function resetFeynmanSession(sessionId) {
-  if (USE_MOCK) {
+  if (USE_FEYNMAN_MOCK) {
     mockCallCount.delete(sessionId)
     return { session_id: sessionId, reset: true }
   }
@@ -70,7 +77,7 @@ export async function resetFeynmanSession(sessionId) {
 }
 
 export async function uploadMaterial(file, subject, onProgress) {
-  if (USE_MOCK) {
+  if (USE_MATERIAL_MOCK) {
     if (onProgress) {
       for (let i = 0; i <= 100; i += 10) {
         await delay(100)
@@ -96,7 +103,7 @@ export async function uploadMaterial(file, subject, onProgress) {
 }
 
 export async function getMaterialStatus(materialId) {
-  if (USE_MOCK) {
+  if (USE_MATERIAL_MOCK) {
     await delay(500)
     if (materialId === 'mat-generating') {
       const storageKey = `feynman_material_progress_${materialId}`
@@ -147,7 +154,7 @@ export async function getMaterialStatus(materialId) {
 }
 
 export async function getKnowledgeTree(subject) {
-  if (USE_MOCK) {
+  if (USE_MATERIAL_MOCK) {
     await delay(500)
     return MOCK_KNOWLEDGE_TREE.data
   }
@@ -156,7 +163,7 @@ export async function getKnowledgeTree(subject) {
 }
 
 export async function getKpDetail(kpId) {
-  if (USE_MOCK) {
+  if (USE_MATERIAL_MOCK) {
     await delay(500)
     return MOCK_KP_DETAIL.data
   }
@@ -165,7 +172,7 @@ export async function getKpDetail(kpId) {
 }
 
 export async function createKp(chapterId, name, pageStart, pageEnd) {
-  if (USE_MOCK) {
+  if (USE_MATERIAL_MOCK) {
     await delay(500)
     return MOCK_KP_CREATE.data
   }
@@ -180,7 +187,7 @@ export async function createKp(chapterId, name, pageStart, pageEnd) {
 }
 
 export async function updateKp(kpId, updates) {
-  if (USE_MOCK) {
+  if (USE_MATERIAL_MOCK) {
     await delay(500)
     if (updates.page_start || updates.page_end) {
       return MOCK_KP_UPDATE.data
@@ -192,7 +199,7 @@ export async function updateKp(kpId, updates) {
 }
 
 export async function deleteKp(kpId) {
-  if (USE_MOCK) {
+  if (USE_MATERIAL_MOCK) {
     await delay(500)
     return MOCK_KP_DELETE.data
   }
@@ -201,7 +208,7 @@ export async function deleteKp(kpId) {
 }
 
 export async function regenerateKp(kpId) {
-  if (USE_MOCK) {
+  if (USE_MATERIAL_MOCK) {
     await delay(500)
     return MOCK_KP_REGENERATE.data
   }

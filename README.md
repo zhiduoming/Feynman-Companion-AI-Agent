@@ -8,14 +8,20 @@
 
 ## Quick Start
 
+后端统一使用 Python 3.13。先确认当前解释器版本：
+
+```bash
+/opt/homebrew/bin/python3.13 --version
+```
+
 ### 1. Start Backend
 
 ```bash
 cd /Users/chen/Code/Feynman-Companion-AI-Agent
-python3 -m venv .venv
+/opt/homebrew/bin/python3.13 -m venv .venv
 source .venv/bin/activate
-pip install -r backend/requirements.txt
-uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
+python -m pip install -r backend/requirements.txt
+python -m uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 后端默认监听 `http://localhost:8000`，Swagger 文档在 `http://localhost:8000/docs`。
@@ -33,7 +39,7 @@ DEEPSEEK_API_KEY=your_key_here
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-chat
 LLM_PROVIDER=deepseek
-REQUEST_TIMEOUT_SECONDS=45
+REQUEST_TIMEOUT_SECONDS=30
 ```
 
 ### 2. Start Frontend
@@ -74,7 +80,7 @@ Feynman-Companion-AI-Agent/
 ```bash
 # Backend tests
 source .venv/bin/activate
-pytest -q backend/tests
+python -m pytest -q backend/tests
 
 # Frontend production build
 cd frontend
@@ -83,9 +89,9 @@ npm run build
 
 ## Demo Flow
 
-1. 前端页面初始化时请求 `GET /api/v1/feynman/greeting`。
-2. 用户输入讲解后，前端请求 `POST /api/v1/feynman/chat`。
-3. 后端围绕 Dijkstra 算法进行追问，最多 3 轮正式追问。
+1. 前端根据用户选择的知识点请求 `GET /api/v1/feynman/greeting?kp_id=...`。
+2. 用户输入讲解后，前端将 `session_id`、`kp_id` 和 `user_input` 发给 `POST /api/v1/feynman/chat`。
+3. 后端通过 LangGraph 围绕当前知识点进行追问，最多 3 轮正式追问。
 4. 达到报告条件后，后端返回 `generate_report`，前端展示诊断报告。
 5. 用户点击重新开始时，前端请求 `POST /api/v1/feynman/reset`。
 
