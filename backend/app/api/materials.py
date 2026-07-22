@@ -2,6 +2,7 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, File, UploadFile, Form, HTTPException
 from sqlmodel import Session
 from backend.app.core.database import get_session
+from backend.app.core.config import get_settings
 from backend.app.models.knowledge import MaterialUploadResponse, MaterialUploadData
 from backend.app.services.pdf_service import save_and_process_pdf
 # 导入我们在 models 里定义好的 Pydantic 数据外壳，用于规范输出格式
@@ -10,22 +11,29 @@ from backend.app.models.knowledge import (
     MaterialStatusData,
     MaterialTreeResponse,
     MaterialTreeData,
+    SubjectListResponse,
     ChapterItem,
     KnowledgePointItem,
     MaterialUploadResponse,
     MaterialUploadData
 )
 from backend.app.services.workflow_service import run_full_extraction_workflow
-from backend.app.services.material_service import get_material_status_from_db, get_material_tree_from_db
+from backend.app.services.material_service import get_material_status_from_db, get_material_tree_from_db, get_subjects_from_db
 
 # 1. 初始化路由器 (设立服务员)
 # prefix="/material": 这个文件里所有接口的 URL 都会自动加上这个前缀
 # tags=["Material"]: 仅用于在 FastAPI 自动生成的 Swagger 接口文档中进行分组展示，方便调试
 router = APIRouter(prefix="/material", tags=["Material"])
 
-# 2. Mock 假数据开关
-# 在真实后厨（解析 PDF、调大模型）写好之前，打开这个开关，直接把假数据端给前端，不阻塞前端画 UI
-USE_MOCK = False
+# =====================================================================
+# 接口 0：查询科目列表
+# 完整 URL: GET /api/v1/material/subjects
+# =====================================================================
+@router.get("/subjects", response_model=SubjectListResponse)
+async def get_subjects(session: Session = Depends(get_session)):
+    """从数据库查询所有已存在的科目列表（去重）。"""
+    subjects = get_subjects_from_db(session)
+    return SubjectListResponse(code=200, msg="success", data=subjects)
 
 # =====================================================================
 # 接口 1：查询教材解析状态
@@ -37,7 +45,7 @@ async def get_material_status(material_id: str, session: Session = Depends(get_s
     根据给定的 material_id，查询当前教材的解析进度。
     （三引号内的这段文字，会自动显示在生成的接口文档中作为接口说明）
     """
-    if USE_MOCK:
+    if get_settings().material_mock:
         # 直接使用 Pydantic 实例化对象并返回，FastAPI 会自动将其转换为 JSON 发给前端
         # 我们把前端传进来的 material_id 原样塞回给前端，让假数据更逼真
         return MaterialStatusResponse(
@@ -68,7 +76,7 @@ async def get_material_tree(subject: str = "计算机", session: Session = Depen
     对应的章节和知识点结构。
     如果不传 subject，默认查询"计算机"科目。
     """
-    if USE_MOCK:
+    if get_settings().material_mock:
         # 这里的结构看起来很深，是因为 PRD 要求的级联选择器需要这种“树状”数据
         # 一层一层向内嵌套实例化：Tree -> Chapter -> KnowledgePoint
         return MaterialTreeResponse(
@@ -103,30 +111,28 @@ async def get_material_tree(subject: str = "计算机", session: Session = Depen
 # =====================================================================
 @router.post("/upload", response_model=MaterialUploadResponse)
 async def upload_material(
-    file: UploadFile = File(...), 
+    file: UploadFile = File(...),
     subject: str = Form(...),
-    background_tasks: BackgroundTasks = BackgroundTasks() # 必须在这里显式注入
+    name: str = Form(""),
+    background_tasks: BackgroundTasks = BackgroundTasks()
 ):
-    """
-    接收前端上传的教材，自动实现切片存入数据库。
-    调用大模型进行知识点抽取和 Rubric 生成。
-    """
-    if USE_MOCK:
+    """接收前端上传的教材和名称，自动解析并存入数据库。"""
+    if get_settings().material_mock:
         return MaterialUploadResponse(
             code=200,
             msg="success",
             data=MaterialUploadData(material_id="mat-demo-upload", status="parsing")
         )
-    
+
     # 1. 读取文件
     try:
         content = await file.read()
     except Exception:
         raise HTTPException(status_code=400, detail="文件读取失败")
-    
+
     # 2. 调用 Service 层解析
     try:
-        generated_id = save_and_process_pdf(content, subject) 
+        generated_id = save_and_process_pdf(content, subject, name) 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

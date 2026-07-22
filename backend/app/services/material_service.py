@@ -81,9 +81,10 @@ def get_material_tree_from_db(session: Session, subject: str) -> list[MaterialTr
             # 组装知识点列表
             kp_items = [
                 KnowledgePointItem(
-                    kp_id=kp.id, 
-                    name=kp.name, 
-                    summary=kp.summary or "暂无摘要"
+                    kp_id=kp.id,
+                    name=kp.name,
+                    summary=kp.summary or "暂无摘要",
+                    status=kp.status
                 ) for kp in kps
             ]
             
@@ -97,8 +98,17 @@ def get_material_tree_from_db(session: Session, subject: str) -> list[MaterialTr
         # 组装单本教材的树结构
         tree_list.append(MaterialTreeData(
             material_id=mat.id,
-            title=mat.filename, # 使用原始文件名作为展示标题
+            title=mat.name, # 使用教材名称作为展示标题
             chapters=chapter_items
         ))
         
     return tree_list
+
+# ==========================================
+# 4. 供 API 层调用的读操作：查询科目列表
+# ==========================================
+def get_subjects_from_db(session: Session) -> list[str]:
+    """从数据库查询所有已存在的科目（去重）"""
+    statement = select(Material.subject).distinct()
+    subjects = session.exec(statement).all()
+    return [s for s in subjects if s]

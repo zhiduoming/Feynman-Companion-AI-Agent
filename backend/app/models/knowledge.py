@@ -19,6 +19,7 @@ class Material(SQLModel, table=True):
     # 主键，类似 "mat-xxx"。因为是我们自己生成的字符串，所以不使用自增。
     id: str = Field(primary_key=True)
     subject: str                  # 科目：计算机/政治/数学等
+    name: str                     # 教材名称，用户上传时填写
     filename: str                 # 原始文件名
     raw_path: str                 # 本地存储路径
     
@@ -125,11 +126,20 @@ class MaterialStatusResponse(BaseModel):
 
 # ------------------------------------------
 
+# 3. 科目列表接口
+class SubjectListResponse(BaseModel):
+    code: int = 200
+    msg: str = "success"
+    data: List[str]
+
+# ------------------------------------------
+
 # 2. 知识点树接口的层级嵌套结构 (从内向外定义)
 class KnowledgePointItem(BaseModel):
     kp_id: str
     name: str
     summary: str
+    status: str = "pending_regenerate"
     tag: Optional[str] = None # 预留给 "高频考点" 等标签
 
 class ChapterItem(BaseModel):

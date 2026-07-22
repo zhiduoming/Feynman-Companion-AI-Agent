@@ -1,12 +1,13 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { uploadMaterial, getMaterialStatus, getKnowledgeTree } from '@/api/feynman'
+import { uploadMaterial, getMaterialStatus, getKnowledgeTree, fetchSubjects } from '@/api/feynman'
 
 const router = useRouter()
-const subjects = ['计算机', '数学', '政治']
-const selectedSubject = ref('计算机')
+const subjects = ref([])
+const selectedSubject = ref('')
 const subjectOpen = ref(false)
+const nameInput = ref('')
 const materials = ref([])
 const isUploading = ref(false)
 const uploadProgress = ref(0)
@@ -38,21 +39,6 @@ async function loadMaterials() {
       progress: undefined,
       error: null
     }))
-    
-    const generatingMat = { 
-      id: 'mat-generating', 
-      name: '数据结构教材.pdf', 
-      status: 'generating', 
-      step: 'generating', 
-      progress: 60, 
-      error: null 
-    }
-    const idx = materials.value.findIndex(m => m.id === 'mat-generating')
-    if (idx >= 0) {
-      materials.value[idx] = generatingMat
-    } else {
-      materials.value.unshift(generatingMat)
-    }
     
     materials.value.forEach(m => {
       if (['parsing', 'chunking', 'extracting', 'generating'].includes(m.status)) {
@@ -123,15 +109,15 @@ async function startUpload(file) {
   uploadError.value = ''
   
   try {
-    const result = await uploadMaterial(file, selectedSubject.value, (percent) => {
+    const result = await uploadMaterial(file, selectedSubject.value, nameInput.value, (percent) => {
       uploadProgress.value = percent
     })
-    
+
     isUploading.value = false
-    
+
     const newMaterial = {
       id: result.material_id,
-      name: file.name,
+      name: nameInput.value || file.name,
       status: result.status || 'parsing',
       step: result.step || 'parsing',
       progress: (result.progress || 0) * 100,
@@ -209,7 +195,12 @@ function handleSubjectChange(s) {
   loadMaterials()
 }
 
-onMounted(() => {
+onMounted(async () => {
+  subjects.value = await fetchSubjects()
+  if (subjects.value.length === 0) {
+    subjects.value = ['计算机', '数学', '政治']
+  }
+  selectedSubject.value = subjects.value[0]
   loadMaterials()
 })
 
@@ -224,34 +215,50 @@ watch(selectedSubject, () => {
   <div class="upload-page">
     <header class="upload-header">
       <span class="page-title">费曼伴学</span>
-      
-      <div class="subject-dropdown">
-        <button
-          class="subject-btn"
-          @click="subjectOpen = !subjectOpen"
-          @blur="setTimeout(() => subjectOpen = false, 150)"
-        >
-          {{ selectedSubject }}
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ 'rotate-180': subjectOpen }">
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </button>
-        <div v-if="subjectOpen" class="subject-menu">
-          <button
-            v-for="s in subjects"
-            :key="s"
-            class="subject-item"
-            :class="{ 'subject-item--selected': s === selectedSubject }"
-            @click="handleSubjectChange(s)"
-          >
-            {{ s }}
-          </button>
-        </div>
-      </div>
     </header>
 
     <main class="upload-main">
       <h1 class="main-title">上传教材PDF</h1>
+
+      <div class="form-card">
+        <div class="form-field">
+          <label class="form-label">科目</label>
+          <div class="subject-dropdown">
+            <button
+              class="subject-btn"
+              @click="subjectOpen = !subjectOpen"
+              @blur="setTimeout(() => subjectOpen = false, 150)"
+            >
+              {{ selectedSubject || '请选择科目' }}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ 'rotate-180': subjectOpen }">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div v-if="subjectOpen" class="subject-menu">
+              <button
+                v-for="s in subjects"
+                :key="s"
+                class="subject-item"
+                :class="{ 'subject-item--selected': s === selectedSubject }"
+                @click="handleSubjectChange(s)"
+              >
+                {{ s }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label">教材名称</label>
+          <input
+            v-model="nameInput"
+            type="text"
+            placeholder="例：数据结构教材"
+            class="name-input"
+            :disabled="isUploading"
+          />
+        </div>
+      </div>
 
       <div
         class="drop-zone"
@@ -433,39 +440,81 @@ watch(selectedSubject, () => {
   color: #1E293B;
 }
 
+.upload-main {
+  flex: 1;
+  padding: 32px 16px;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.main-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1E293B;
+  margin: 0;
+}
+
+.form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748B;
+}
+
 .subject-dropdown {
   position: relative;
+  width: 100%;
 }
 
 .subject-btn {
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid #E2E8F0;
-  background: #FFFFFF;
-  font-size: 14px;
-  font-weight: 500;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid #CBD5E1;
+  font-size: 15px;
   color: #1E293B;
+  background: #FFFFFF;
   transition: all 150ms;
 }
 
 .subject-btn:hover {
-  background: #F1F5F9;
+  border-color: rgba(37, 99, 235, 0.5);
 }
 
 .subject-menu {
   position: absolute;
+  z-index: 50;
+  left: 0;
   right: 0;
-  top: calc(100% + 6px);
-  width: 112px;
+  top: calc(100% + 4px);
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 12px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  z-index: 40;
 }
 
 .subject-item {
@@ -487,22 +536,31 @@ watch(selectedSubject, () => {
   font-weight: 600;
 }
 
-.upload-main {
-  flex: 1;
-  padding: 32px 16px;
-  max-width: 800px;
-  margin: 0 auto;
+.name-input {
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
+  padding: 12px 16px;
+  border: 1px solid #CBD5E1;
+  border-radius: 12px;
+  font-size: 15px;
+  color: #1E293B;
+  background: #FFFFFF;
+  transition: all 150ms;
+  box-sizing: border-box;
 }
 
-.main-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #1E293B;
-  margin: 0;
+.name-input:focus {
+  outline: none;
+  border-color: rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.name-input:disabled {
+  background: #F1F5F9;
+  color: #94A3B8;
+}
+
+.name-input::placeholder {
+  color: #94A3B8;
 }
 
 .drop-zone {

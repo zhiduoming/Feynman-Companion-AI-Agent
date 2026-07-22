@@ -26,7 +26,7 @@ def simple_chunking(text: str, chunk_size=600):
 # ==========================================
 # 核心业务：保存并解析 PDF
 # ==========================================
-def save_and_process_pdf(file_content: bytes, subject: str) -> str:
+def save_and_process_pdf(file_content: bytes, subject: str, name: str = "") -> str:
     """
     接收 PDF 字节流，保存到本地，解析目录构建章节，然后切片并存入数据库。
     """
@@ -50,7 +50,7 @@ def save_and_process_pdf(file_content: bytes, subject: str) -> str:
             raise ValueError("检测到扫描版 PDF，无法提取文本，请上传电子原版。")
 
     # ==========================================
-    # [新增核心逻辑] 2. 解析目录并构建 Chapter
+    # 2. 解析目录并构建 Chapter
     # ==========================================
     toc = doc.get_toc()
     chapter_list = []
@@ -97,7 +97,8 @@ def save_and_process_pdf(file_content: bytes, subject: str) -> str:
         # 先创建 Material 记录
         new_material = Material(
             id=material_id,
-            subject=subject,    
+            subject=subject,
+            name=name or f"{material_id}.pdf",
             filename=f"{material_id}.pdf",
             raw_path=file_path,
             uploaded_at=datetime.now(),
