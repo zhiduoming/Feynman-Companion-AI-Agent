@@ -30,6 +30,7 @@ class Settings(BaseModel):
     deepseek_model: str = "deepseek-chat"
     request_timeout_seconds: float = 30.0
     max_follow_ups: int = 3
+    material_mock: bool = False
     cors_allow_origins: List[str] = ["*"]
 
     @property
@@ -51,10 +52,14 @@ def get_settings() -> Settings:
         except ValueError:
             return default
 
+    def pick_bool(name: str, default: bool = False) -> bool:
+        return pick(name, str(default)).lower() in ("true", "1", "yes")
+
     return Settings(
         llm_provider=pick("LLM_PROVIDER", "mock").lower(),
         deepseek_api_key=pick("DEEPSEEK_API_KEY", ""),
         deepseek_base_url=pick("DEEPSEEK_BASE_URL", "https://api.deepseek.com").rstrip("/"),
         deepseek_model=pick("DEEPSEEK_MODEL", "deepseek-chat"),
         request_timeout_seconds=pick_float("REQUEST_TIMEOUT_SECONDS", 30.0),
+        material_mock=pick_bool("MATERIAL_MOCK", False),
     )

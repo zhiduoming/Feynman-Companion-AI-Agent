@@ -27,8 +27,7 @@ const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS || 60000)
 
 const http = axios.create({
   baseURL: BASE_URL,
-  timeout: API_TIMEOUT_MS,
-  headers: { 'Content-Type': 'application/json' }
+  timeout: API_TIMEOUT_MS
 })
 
 http.interceptors.response.use(
@@ -76,7 +75,7 @@ export async function resetFeynmanSession(sessionId) {
   return data?.data
 }
 
-export async function uploadMaterial(file, subject, onProgress) {
+export async function uploadMaterial(file, subject, name, onProgress) {
   if (USE_MATERIAL_MOCK) {
     if (onProgress) {
       for (let i = 0; i <= 100; i += 10) {
@@ -90,8 +89,8 @@ export async function uploadMaterial(file, subject, onProgress) {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('subject', subject)
+  formData.append('name', name)
   const data = await http.post('/material/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: (progressEvent) => {
       if (onProgress && progressEvent.total) {
         const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
@@ -159,6 +158,15 @@ export async function getKnowledgeTree(subject) {
     return MOCK_KNOWLEDGE_TREE.data
   }
   const data = await http.get('/material/tree', { params: { subject } })
+  return data?.data
+}
+
+export async function fetchSubjects() {
+  if (USE_MATERIAL_MOCK) {
+    await delay(300)
+    return ['计算机', '数学', '政治']
+  }
+  const data = await http.get('/material/subjects')
   return data?.data
 }
 
