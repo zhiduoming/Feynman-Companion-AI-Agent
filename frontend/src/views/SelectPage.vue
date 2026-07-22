@@ -3,6 +3,7 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useChatStore } from '@/stores/chatStore'
 import { getKnowledgeTree, fetchGreeting, fetchSubjects } from '@/api/feynman'
+import UserBar from '@/components/UserBar.vue'
 
 const router = useRouter()
 const chatStore = useChatStore()
@@ -192,6 +193,17 @@ onMounted(async () => {
   <div class="select-page">
     <header class="select-header">
       <h1 class="page-title">选择知识点开始费曼学习</h1>
+      <div class="header-actions">
+        <button class="upload-btn" @click="goToUploadPage">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          <span>上传教材</span>
+        </button>
+        <UserBar />
+      </div>
     </header>
 
     <main class="select-main">
@@ -414,6 +426,7 @@ onMounted(async () => {
   height: 56px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 24px;
 }
 
@@ -421,6 +434,31 @@ onMounted(async () => {
   font-size: 15px;
   font-weight: 600;
   color: #1E293B;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.06);
+  font-size: 14px;
+  font-weight: 500;
+  color: #2563EB;
+  transition: all 150ms;
+}
+
+.upload-btn:hover {
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.5);
 }
 
 .select-main {

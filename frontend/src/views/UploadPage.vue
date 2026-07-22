@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { uploadMaterial, getMaterialStatus, getKnowledgeTree, fetchSubjects } from '@/api/feynman'
+import UserBar from '@/components/UserBar.vue'
 
 const router = useRouter()
 const subjects = ref([])
@@ -215,6 +216,7 @@ watch(selectedSubject, () => {
   <div class="upload-page">
     <header class="upload-header">
       <span class="page-title">费曼伴学</span>
+      <UserBar />
     </header>
 
     <main class="upload-main">

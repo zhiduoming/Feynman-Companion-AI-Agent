@@ -152,12 +152,13 @@ watch(text, () => nextTick(autoGrow))
   display: flex;
   flex-direction: column;
   background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 13.375px;
   padding: 7.5px 11.25px;
-  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.06);
-  transition: border-color 0.15s;
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
+
 .input-box:focus-within {
   border-color: #2563EB;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
@@ -172,6 +173,8 @@ textarea {
   font-size: 14.0625px;
   line-height: 23px;
   background: transparent;
+  border: none;
+  outline: none;
 }
 
 .input-footer {

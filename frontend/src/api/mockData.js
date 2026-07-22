@@ -111,6 +111,7 @@ export const MOCK_KNOWLEDGE_TREE = {
     {
       material_id: 'mat-demo',
       title: '数据结构教材',
+      user_id: 'user-demo',
       chapters: [
         {
           chapter_id: 'ch-demo',
@@ -199,14 +200,28 @@ export const MOCK_KP_DETAIL = {
   }
 }
 
-export const MOCK_GREETING_DYNAMIC = {
-  code: 200,
-  msg: 'success',
-  data: {
+export const MOCK_GREETING_MAP = {
+  'kp-demo': {
     reply_text: '请你向我讲解一下 Dijkstra 算法的核心原理，讲得越详细越好。',
     kp_id: 'kp-demo',
     kp_name: 'Dijkstra 算法'
+  },
+  'kp-mst': {
+    reply_text: '请你向我讲解一下最小生成树的概念与常见算法。',
+    kp_id: 'kp-mst',
+    kp_name: '最小生成树'
+  },
+  'kp-topo': {
+    reply_text: '请你向我讲解一下拓扑排序的原理和适用场景。',
+    kp_id: 'kp-topo',
+    kp_name: '拓扑排序'
   }
+}
+
+export const MOCK_GREETING_DYNAMIC = {
+  code: 200,
+  msg: 'success',
+  data: MOCK_GREETING_MAP['kp-demo']
 }
 
 export const MOCK_KP_CREATE = {
@@ -244,4 +259,72 @@ export const MOCK_KP_REGENERATE = {
     kp_id: 'kp-demo',
     status: 'pending_regenerate'
   }
+}
+
+// Auth模块Mock数据
+export const MOCK_AUTH_LOGIN = {
+  code: 200,
+  msg: '登录成功',
+  data: {
+    token: 'mock-token-demo-123',
+    user_id: 'user-demo',
+    username: 'teststudent'
+  }
+}
+
+export const MOCK_AUTH_REGISTER = {
+  code: 200,
+  msg: '注册成功，请登录',
+  data: {
+    user_id: 'user-001'
+  }
+}
+
+export const MOCK_AUTH_CURRENT = {
+  code: 200,
+  msg: 'success',
+  data: {
+    user_id: 'user-demo',
+    username: 'teststudent'
+  }
+}
+
+// RAG向量检索Mock数据
+export const MOCK_RAG_RETRIEVE = {
+  code: 200,
+  msg: 'success',
+  data: [
+    {
+      chunk_id: 'chunk-1',
+      page_no: 30,
+      text: 'Dijkstra算法用于求解非负权带权图单源最短路径，核心为贪心策略。',
+      score: 0.97
+    },
+    {
+      chunk_id: 'chunk-8',
+      page_no: 36,
+      text: '贪心算法全局最优成立条件：不存在后续更短路径，依赖边权非负约束。',
+      score: 0.91
+    },
+    {
+      chunk_id: 'chunk-15',
+      page_no: 72,
+      text: '松弛操作会更新相邻节点最短距离，是Dijkstra核心执行步骤。',
+      score: 0.85
+    }
+  ]
+}
+
+// 历史会话Mock数据（P1）
+export const MOCK_SESSIONS = {
+  code: 200,
+  msg: 'success',
+  data: [
+    {
+      session_id: 'ses-demo',
+      kp_name: 'Dijkstra 算法',
+      material_title: '数据结构教材',
+      created_at: '2026-07-20T10:30:00'
+    }
+  ]
 }
