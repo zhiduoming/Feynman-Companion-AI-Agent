@@ -21,6 +21,11 @@ function handleLogout() {
   router.push('/upload')
 }
 
+function handleProfile() {
+  dropdownOpen.value = false
+  router.push('/profile')
+}
+
 function toggleDropdown() {
   dropdownOpen.value = !dropdownOpen.value
 }
@@ -64,6 +69,13 @@ onUnmounted(() => {
       </button>
 
       <div v-if="dropdownOpen" class="user-dropdown">
+        <button class="dropdown-item" @click.stop="handleProfile">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span>个人中心</span>
+        </button>
         <button class="dropdown-item dropdown-item--danger" @click.stop="handleLogout">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

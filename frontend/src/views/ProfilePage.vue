@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
-import { getKnowledgeTree } from '@/api/feynman'
+import { getKnowledgeTree, getSessionList } from '@/api/feynman'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -74,7 +74,14 @@ async function loadHistorySessions() {
         }
       ]
     } else {
-      sessions.value = []
+      const data = await getSessionList()
+      sessions.value = data.map(session => ({
+        id: session.session_id,
+        kpName: session.kp_name || '未知知识点',
+        materialTitle: session.material_title || '未知教材',
+        createdAt: new Date(session.created_at).toLocaleString(),
+        messageCount: null
+      }))
     }
   } catch (e) {
     sessions.value = []
@@ -306,7 +313,9 @@ onMounted(() => {
               </div>
               <div class="history-meta">
                 <div class="history-date">{{ session.createdAt }}</div>
-                <div class="history-count">{{ session.messageCount }} 条消息</div>
+                <div v-if="session.messageCount != null" class="history-count">
+                  {{ session.messageCount }} 条消息
+                </div>
               </div>
             </div>
           </div>

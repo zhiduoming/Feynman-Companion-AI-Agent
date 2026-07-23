@@ -61,7 +61,13 @@ http.interceptors.response.use(
       err?.message ||
       '网络异常，请稍后重试'
 
-    if (err?.response?.status === 401) {
+    const requestUrl = err?.config?.url || ''
+    const isCredentialRequest =
+      requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/auth/register')
+    const hadToken = Boolean(localStorage.getItem('feynman_token'))
+
+    if (err?.response?.status === 401 && hadToken && !isCredentialRequest) {
       localStorage.removeItem('feynman_token')
       localStorage.removeItem('feynman_user')
       window.location.href = '/login'
