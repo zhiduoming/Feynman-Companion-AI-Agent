@@ -14,7 +14,12 @@ from backend.app.services.extraction_service import extract_kps_for_material, ge
 # 导入状态更新函数。用来随时把当前进度写进数据库，让前端轮询时能查到
 from backend.app.services.material_service import update_material_status
 
+# 导入Rag 存储向量函数
+from backend.app.services.rag_service import build_material_embeddings
 
+import logging
+logger = logging.getLogger(__name__)
+        
 async def run_full_extraction_workflow(material_id: str):
     """
     全自动教材解析管线。它是被扔在后台运行的，哪怕用户关了网页，它也会默默跑完。
@@ -66,7 +71,18 @@ async def run_full_extraction_workflow(material_id: str):
                     )
 
         # ==========================================
-        # 阶段 3：顺利结束
+        # 阶段 3：Rag Service
+        # ==========================================
+        # 在所有基础数据落库完成后，触发向量化任务
+        try:
+            logger.info(f"开始为教材 {material_id} 执行异步向量化任务...")
+            build_material_embeddings(session=session, material_id=material_id)
+        except Exception as e:
+            logger.error(f"教材 {material_id} 向量化任务异常，但不阻塞总体进度: {e}")
+
+
+        # ==========================================
+        # 阶段 4：顺利结束
         # ==========================================
         # 所有代码都跑通了，没报错。告诉前端：“大功告成”，进度条推满 100%
         update_material_status(material_id=material_id, status="done", step="解析完成", progress=1.0)

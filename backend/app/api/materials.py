@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, UploadFile, Form, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Query, UploadFile, Form, HTTPException
 from sqlmodel import Session
 from backend.app.core.database import get_session
 from backend.app.core.config import get_settings
@@ -19,6 +19,8 @@ from backend.app.models.knowledge import (
 )
 from backend.app.services.workflow_service import run_full_extraction_workflow
 from backend.app.services.material_service import get_material_status_from_db, get_material_tree_from_db, get_subjects_from_db
+from backend.app.services.vector_store import vector_store
+from backend.app.services.rag_service import build_material_embeddings
 
 # 1. 初始化路由器 (设立服务员)
 # prefix="/material": 这个文件里所有接口的 URL 都会自动加上这个前缀
@@ -147,3 +149,31 @@ async def upload_material(
         msg="success",
         data=MaterialUploadData(material_id=generated_id, status="parsing")
     )
+# =====================================================================
+# 接口 4：检索教材内容
+# 完整 URL: GET /api/v1/material/{material_id}/retrieve
+# =====================================================================
+@router.get("/{material_id}/retrieve")
+def retrieve_chunks(
+    material_id: str,
+    query: str = Query(..., description="用户输入的讲解文本或需要检索的问题"),
+    top_k: int = Query(3, description="期望召回的相似 Chunk 数量")
+):
+    """
+    RAG 检索接口：根据文本召回 Top-K 相似度最高的 Chunk
+    """
+    results = vector_store.search(material_id=material_id, query=query, top_k=top_k)
+    return {"code": 200, "status": "success", "data": results}
+
+
+@router.post("/{material_id}/embedding/rebuild")
+def rebuild_material_embedding(
+    material_id: str, 
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_session)
+):
+    """
+    存量数据重建接口：手动触发某本教材的向量化任务
+    """
+    background_tasks.add_task(build_material_embeddings, session=db, material_id=material_id)
+    return {"code": 200, "status": "success", "message": f"已将教材 {material_id} 的向量化任务加入后台队列"}

@@ -19,6 +19,7 @@ class MockLLMClient:
         follow_up_count: int,
         max_follow_ups: int,
         knowledge_point: KnowledgePoint,
+        rag_chunks: list[dict] = None,
     ) -> FeynmanChatData:
         text = _normalize(user_input)
         all_text = _normalize(" ".join([message.content for message in messages] + [user_input]))

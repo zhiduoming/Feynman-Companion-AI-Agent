@@ -10,10 +10,11 @@ from backend.app.services.kp_provider import (
     KnowledgePoint,
     KnowledgePointProvider,
 )
+from backend.app.services.rag_service import vector_store
 from backend.app.services.session_store import SessionState
 
 
-RouteName = Literal["kp_missing", "off_topic", "ineffective", "evaluate", "report"]
+RouteName = Literal["kp_missing", "off_topic", "ineffective", "retrieve", "report"]
 
 
 class FeynmanGraphState(TypedDict, total=False):
@@ -24,6 +25,7 @@ class FeynmanGraphState(TypedDict, total=False):
     response: FeynmanChatData
     provider: str
     fallback_used: bool
+    rag_chunks: list[dict]  # RAG 检索到的跨章节原文切片
 
 
 class FeynmanGraph:
@@ -60,6 +62,7 @@ class FeynmanGraph:
         builder.add_node("kp_missing", self._handle_kp_missing)
         builder.add_node("off_topic", self._handle_off_topic)
         builder.add_node("ineffective", self._handle_ineffective)
+        builder.add_node("retrieve", self._retrieve)
         builder.add_node("evaluate", self._evaluate)
         builder.add_node("report", self._report)
         builder.add_node("persist_session", self._persist_session)
@@ -73,10 +76,12 @@ class FeynmanGraph:
                 "kp_missing": "kp_missing",
                 "off_topic": "off_topic",
                 "ineffective": "ineffective",
-                "evaluate": "evaluate",
+                "retrieve": "retrieve",
                 "report": "report",
             },
         )
+        # retrieve 完成后进入 evaluate 做 LLM 评判
+        builder.add_edge("retrieve", "evaluate")
         for node_name in ["kp_missing", "off_topic", "ineffective", "evaluate", "report"]:
             builder.add_edge(node_name, "persist_session")
         builder.add_edge("persist_session", END)
@@ -118,7 +123,8 @@ class FeynmanGraph:
         elif session.follow_up_count >= self._max_follow_ups:
             route = "report"
         else:
-            route = "evaluate"
+            # 正常评估路径：先 retrieve 检索相关原文，再 evaluate
+            route = "retrieve"
         return {"route": route}
 
     @staticmethod
@@ -170,10 +176,36 @@ class FeynmanGraph:
             "fallback_used": False,
         }
 
+    async def _retrieve(self, state: FeynmanGraphState) -> FeynmanGraphState:
+        """
+        RAG 检索节点：以用户输入为 query，检索教材中语义相关的 Top3 Chunk。
+        检索结果存入 rag_chunks，供 evaluate 节点注入 Prompt。
+        """
+        session = state["session"]
+        request = state["request"]
+        material_id = session.material_id
+
+        rag_chunks = []
+        if material_id:
+            try:
+                rag_chunks = vector_store.search(
+                    material_id=material_id,
+                    query=request.user_input.strip(),
+                    top_k=3
+                )
+                if rag_chunks:
+                    print(f"🔍 RAG 检索到 {len(rag_chunks)} 条相关原文")
+            except Exception as e:
+                print(f"⚠️ RAG 检索失败（降级跳过）: {e}")
+                rag_chunks = []
+
+        return {"rag_chunks": rag_chunks}
+
     async def _evaluate(self, state: FeynmanGraphState) -> FeynmanGraphState:
         session = state["session"]
         request = state["request"]
         knowledge_point = state["knowledge_point"]
+        rag_chunks = state.get("rag_chunks", [])
         assert knowledge_point is not None
         try:
             response = await self._llm_client.evaluate(
@@ -182,6 +214,7 @@ class FeynmanGraph:
                 follow_up_count=session.follow_up_count,
                 max_follow_ups=self._max_follow_ups,
                 knowledge_point=knowledge_point,
+                rag_chunks=rag_chunks,
             )
             response = _normalize_contract(response)
             return {
@@ -196,6 +229,7 @@ class FeynmanGraph:
                 follow_up_count=session.follow_up_count,
                 max_follow_ups=self._max_follow_ups,
                 knowledge_point=knowledge_point,
+                rag_chunks=rag_chunks,
             )
             response = _normalize_contract(response)
             return {"response": response, "provider": "mock", "fallback_used": True}

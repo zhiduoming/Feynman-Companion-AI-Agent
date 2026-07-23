@@ -54,8 +54,21 @@ def build_user_prompt(
     user_input: str,
     follow_up_count: int,
     max_follow_ups: int,
+    rag_chunks: list[Dict[str, Any]] = None,
 ) -> str:
     transcript = "\n".join(f"{message.role}: {message.content}" for message in messages[-8:])
+
+    # 如果有 RAG 检索到的跨章节原文，拼接到 Prompt 中
+    rag_section = ""
+    if rag_chunks:
+        rag_texts = "\n".join(
+            f"  [第 {c['page_no']} 页] {c['text']}" for c in rag_chunks
+        )
+        rag_section = f"""
+【教材相关原文参考（来自其他章节的语义相关内容）】
+{rag_texts}
+"""
+
     return f"""
 当前已发起追问轮数：{follow_up_count}/{max_follow_ups}
 
@@ -64,7 +77,7 @@ def build_user_prompt(
 
 用户本轮输入：
 {user_input}
-
+{rag_section}
 请根据规则判断下一步动作，并只返回 JSON。
 """.strip()
 
