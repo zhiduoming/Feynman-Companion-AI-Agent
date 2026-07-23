@@ -7,11 +7,16 @@ import LoadingBubble from '@/components/LoadingBubble.vue'
 import ReportCard from '@/components/ReportCard.vue'
 import ReportDrawer from '@/components/ReportDrawer.vue'
 import ChatInput from '@/components/ChatInput.vue'
+import UserBar from '@/components/UserBar.vue'
 
-const store = useChatStore()
 const router = useRouter()
+const store = useChatStore()
 const drawerOpen = ref(false)
 const messageListEl = ref(null)
+
+function goBack() {
+  router.push('/select')
+}
 
 /** 滚到底部 */
 async function scrollToBottom(smooth = true) {
@@ -67,7 +72,11 @@ function openDrawer() {
   <div class="chat-view">
     <!-- 顶部 Header -->
     <header class="chat-header">
+      <button class="back-btn" @click="goBack">
+        ← 选择知识点
+      </button>
       <h1 class="chat-title">费曼伴学智能体 — 数据结构专练</h1>
+      <UserBar />
     </header>
 
     <!-- 消息区 -->
@@ -123,13 +132,24 @@ function openDrawer() {
 .chat-header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   padding: 0 15px;
   width: 100%;
   height: 52.5px;
   background: #FFFFFF;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   flex-shrink: 0;
+}
+.back-btn {
+  font-size: 13px;
+  color: #64748B;
+  transition: color 150ms;
+  background: transparent;
+  border: none;
+}
+
+.back-btn:hover {
+  color: #1E293B;
 }
 .chat-title {
   margin: 0;

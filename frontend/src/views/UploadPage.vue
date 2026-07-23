@@ -8,6 +8,7 @@ import {
   retryMaterial,
   uploadMaterial
 } from '@/api/feynman'
+import UserBar from '@/components/UserBar.vue'
 
 const router = useRouter()
 const DEFAULT_SUBJECTS = ['计算机', '数学', '政治']
@@ -261,6 +262,7 @@ onMounted(async () => {
             <path d="M5 12h14M12 5l7 7-7 7" />
           </svg>
         </button>
+        <UserBar />
       </div>
     </header>
 

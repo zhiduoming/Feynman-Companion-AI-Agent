@@ -2,6 +2,7 @@
 import { ref, onBeforeUnmount, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getKnowledgeTree, getKpDetail, createKp, updateKp, deleteKp, regenerateKp } from '@/api/feynman'
+import UserBar from '@/components/UserBar.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -307,6 +308,7 @@ onBeforeUnmount(() => {
           </svg>
           新增知识点
         </button>
+        <UserBar />
       </div>
     </header>
 
@@ -570,6 +572,7 @@ onBeforeUnmount(() => {
   height: 56px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 20px;
   gap: 16px;
 }

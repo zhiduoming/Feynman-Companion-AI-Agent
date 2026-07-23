@@ -9,10 +9,16 @@ import {
   MOCK_KNOWLEDGE_TREE,
   MOCK_KP_DETAIL,
   MOCK_GREETING_DYNAMIC,
+  MOCK_GREETING_MAP,
   MOCK_KP_CREATE,
   MOCK_KP_UPDATE,
   MOCK_KP_DELETE,
-  MOCK_KP_REGENERATE
+  MOCK_KP_REGENERATE,
+  MOCK_AUTH_LOGIN,
+  MOCK_AUTH_REGISTER,
+  MOCK_AUTH_CURRENT,
+  MOCK_RAG_RETRIEVE,
+  MOCK_SESSIONS
 } from './mockData'
 
 const LEGACY_USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
@@ -30,15 +36,48 @@ const http = axios.create({
   timeout: API_TIMEOUT_MS
 })
 
+// 请求拦截器：自动携带Authorization Token
+http.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('feynman_token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (err) => {
+    return Promise.reject(err)
+  }
+)
+
 http.interceptors.response.use(
   (resp) => resp.data,
   (err) => {
+    const responseData = err?.response?.data
     const message =
-      err?.response?.data?.detail ||
-      err?.response?.data?.msg ||
+      responseData?.detail ||
+      responseData?.msg ||
+      responseData?.error ||
       err?.message ||
       '网络异常，请稍后重试'
-    return Promise.reject(new Error(message))
+
+    const requestUrl = err?.config?.url || ''
+    const isCredentialRequest =
+      requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/auth/register')
+    const hadToken = Boolean(localStorage.getItem('feynman_token'))
+
+    if (err?.response?.status === 401 && hadToken && !isCredentialRequest) {
+      localStorage.removeItem('feynman_token')
+      localStorage.removeItem('feynman_user')
+      window.location.href = '/login'
+    }
+
+    const error = new Error(message)
+    if (err?.response?.status) {
+      error.status = err.response.status
+    }
+    return Promise.reject(error)
   }
 )
 
@@ -58,7 +97,7 @@ export async function fetchGreeting(kpId = null) {
   if (USE_FEYNMAN_MOCK) {
     await delay(400)
     if (kpId) {
-      return MOCK_GREETING_DYNAMIC.data
+      return MOCK_GREETING_MAP[kpId] || MOCK_GREETING_DYNAMIC.data
     }
     return MOCK_GREETING.data
   }
@@ -245,6 +284,153 @@ async function mockChat(sessionId, userInput) {
     return MOCK_GENERATE_REPORT.data
   }
   return MOCK_FOLLOW_UP.data
+}
+
+// Mock用户存储（内存中保存注册用户）
+const mockUsers = new Map([
+  ['teststudent', { username: 'teststudent', password: '123456', user_id: 'user-demo' }]
+])
+
+// Auth模块API
+
+/**
+ * 用户登录
+ * @param {string} username - 用户名
+ * @param {string} password - 密码
+ */
+export async function login(username, password) {
+  if (USE_FEYNMAN_MOCK) {
+    await delay(400)
+    // Mock模式：检查用户是否存在且密码正确
+    const user = mockUsers.get(username)
+    if (user && user.password === password) {
+      return {
+        token: `mock-token-${username}-${Date.now()}`,
+        user_id: user.user_id,
+        username: user.username
+      }
+    }
+    // 返回401错误
+    const error = new Error('用户名或密码错误')
+    error.status = 401
+    return Promise.reject(error)
+  }
+  const data = await http.post('/auth/login', { username, password })
+  return data?.data
+}
+
+/**
+ * 用户注册
+ * @param {string} username - 用户名
+ * @param {string} password - 密码
+ */
+export async function register(username, password) {
+  if (USE_FEYNMAN_MOCK) {
+    await delay(400)
+    // Mock模式：检查用户名是否已存在
+    if (mockUsers.has(username)) {
+      const error = new Error('该用户名已被注册')
+      error.status = 400
+      return Promise.reject(error)
+    }
+    // 创建新用户
+    const userId = 'user-' + Date.now()
+    mockUsers.set(username, { username, password, user_id: userId })
+    return { user_id: userId }
+  }
+  const data = await http.post('/auth/register', { username, password })
+  return data?.data
+}
+
+/**
+ * 获取当前登录用户信息
+ */
+export async function getCurrentUser() {
+  if (USE_FEYNMAN_MOCK) {
+    await delay(300)
+    // Mock模式：检查是否有token和用户信息
+    const token = localStorage.getItem('feynman_token')
+    const userStr = localStorage.getItem('feynman_user')
+    if (token && userStr) {
+      const user = JSON.parse(userStr)
+      return {
+        user_id: user.user_id,
+        username: user.username
+      }
+    }
+    // 未登录返回401错误
+    const error = new Error('请先登录')
+    error.status = 401
+    return Promise.reject(error)
+  }
+  const data = await http.get('/auth/current')
+  return data?.data
+}
+
+// RAG向量检索模块API
+
+/**
+ * 教材语义检索
+ * @param {string} materialId - 教材ID
+ * @param {string} query - 讲解文本
+ * @param {number} topK - 返回数量，默认3
+ */
+export async function retrieveMaterialChunks(materialId, query, topK = 3) {
+  if (USE_MATERIAL_MOCK) {
+    await delay(500)
+    return MOCK_RAG_RETRIEVE.data
+  }
+  const data = await http.get(`/material/${materialId}/retrieve`, {
+    params: { query, top_k: topK }
+  })
+  return data?.data
+}
+
+/**
+ * 手动触发教材向量重生成
+ * @param {string} materialId - 教材ID
+ */
+export async function rebuildMaterialEmbedding(materialId) {
+  if (USE_MATERIAL_MOCK) {
+    await delay(300)
+    return { material_id: materialId }
+  }
+  const data = await http.post(`/material/${materialId}/embedding/rebuild`)
+  return data?.data
+}
+
+// 会话持久化模块API
+
+/**
+ * 获取历史会话列表（P1）
+ */
+export async function getSessionList() {
+  if (USE_FEYNMAN_MOCK) {
+    await delay(400)
+    return MOCK_SESSIONS.data
+  }
+  const data = await http.get('/feynman/sessions')
+  return data?.data
+}
+
+/**
+ * 查询单条历史会话详情（P1）
+ * @param {string} sessionId - 会话ID
+ */
+export async function getSessionDetail(sessionId) {
+  if (USE_FEYNMAN_MOCK) {
+    await delay(400)
+    return {
+      session_id: sessionId,
+      kp_name: 'Dijkstra 算法',
+      material_title: '数据结构教材',
+      chat_history: [],
+      report_data: null,
+      created_at: '2026-07-20T10:30:00'
+    }
+  }
+  const data = await http.get(`/feynman/sessions/${sessionId}`)
+  return data?.data
 }
 
 function delay(ms) {
