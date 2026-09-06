@@ -7,6 +7,7 @@ from backend.app.core.config import Settings
 from backend.app.models.feynman import ChatMessage, FeynmanChatData
 from backend.app.models.knowledge import KPExtractionResponse
 from backend.app.models.rag import RetrievedChunk
+from backend.app.models.review_context import ReviewContext
 from backend.app.models.user_profile import UserProfileResponse
 from backend.app.services.kp_provider import KnowledgePoint
 from backend.app.services.prompt_builder import build_system_prompt, build_user_prompt
@@ -31,6 +32,7 @@ class DeepSeekClient:
         knowledge_point: KnowledgePoint,
         grounding_chunks: Sequence[RetrievedChunk] = (),
         profile: Optional[UserProfileResponse] = None,
+        review_context: Optional[ReviewContext] = None,
     ) -> FeynmanChatData:
         parsed = await self._request_json(
             system_prompt=build_system_prompt(
@@ -38,6 +40,7 @@ class DeepSeekClient:
                 rubric=knowledge_point.rubric,
                 grounding_chunks=grounding_chunks,
                 profile=profile,
+                review_context=review_context,
             ),
             user_prompt=build_user_prompt(
                 messages=messages,

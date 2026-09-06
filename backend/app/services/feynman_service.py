@@ -32,6 +32,7 @@ from backend.app.services.session_store import (
 )
 from sqlalchemy.orm import Session
 from backend.app.services.user_profile_service import UserProfileService
+from backend.app.models.review_context import ReviewContext, TargetGap
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,7 @@ class FeynmanService:
         rag_retriever: Optional[RAGRetriever] = None,
         report_finalizer: Optional[ReportFinalizer] = None,
         profile_provider=None,
+        review_context_provider=None,
     ) -> None:
         self._store = store
         self._llm_client = llm_client
@@ -62,6 +64,7 @@ class FeynmanService:
             primary_provider_name=primary_provider_name,
             rag_retriever=rag_retriever or get_rag_retriever(),
             profile_provider=profile_provider,
+            review_context_provider=review_context_provider,
         )
 
     async def chat(
@@ -106,18 +109,38 @@ class FeynmanService:
                 session.session_id,
             )
 
-    def greeting(self, kp_id: Optional[str] = None) -> GreetingData:
+    def greeting(self, kp_id: Optional[str] = None, session_id: Optional[str] = None, user_id: str = GUEST_USER_ID) -> GreetingData:
         knowledge_point = self._kp_provider.get(kp_id or DEFAULT_KP_ID)
         if knowledge_point is None:
             raise ValueError("knowledge point not found")
+        is_review = False
+        review_focus = []
+        reply_text = f"请你向我讲解一下{knowledge_point.name}的核心原理，讲得越详细越好。"
+
+        # 如果传入了 session_id 且不是游客，尝试加载复习上下文
+        if session_id and user_id != GUEST_USER_ID:
+            from backend.app.services.review_context_service import safe_load_review_context
+            # 从图实例中获取配置好的 provider
+            provider = getattr(self._graph, "_review_context_provider", None)
+            review_context = safe_load_review_context(provider, session_id, user_id)
+
+            # 拼接greeting文本，提示用户进入复习模式
+            if review_context:
+                is_review = True
+                review_focus = review_context.review_focus
+                focus_str = "、".join(review_focus)
+                reply_text = (
+                    f"欢迎进入专项复习！上次我们在「{focus_str}」等维度上发现了一些需要强化的漏洞。 "
+                    f"这次请再次向我讲解一下{knowledge_point.name}，我们来看看这些地方掌握得怎么样了。"
+                )
+
         return GreetingData(
-            reply_text=(
-                f"请你向我讲解一下{knowledge_point.name}的核心原理，"
-                "讲得越详细越好。"
-            ),
-            kp_id=knowledge_point.kp_id,
-            kp_name=knowledge_point.name,
-        )
+                reply_text=reply_text,
+                kp_id=knowledge_point.kp_id,
+                kp_name=knowledge_point.name,
+                is_review=is_review,
+                review_focus=review_focus,
+            )
 
     def reset(
         self,
@@ -204,6 +227,7 @@ def get_feynman_service() -> FeynmanService:
         fallback_client=MockLLMClient(),
         report_finalizer=DiagnosticReportFinalizer(engine),
         profile_provider=_load_profile_from_db,
+        review_context_provider=TemporaryTestReviewContextProvider(),  # 注入测试Provider
     )
 
 
@@ -215,3 +239,26 @@ def _load_profile_from_db(user_id: str):
 
     with Session(engine) as db:
         return UserProfileService.get_profile_by_user_id(db, user_id)
+
+
+class TemporaryTestReviewContextProvider:
+    """临时测试用的 ReviewContextProvider，用于本地 Swagger 联调"""
+    def load_review_context(self, session_id: str, user_id: str) -> Optional[ReviewContext]:
+        # 如果你指定的测试 session_id 匹配，就返回模拟的复习上下文
+        if session_id == "session-test-review":
+            return ReviewContext(
+                gap_id="gap-mock-001",
+                kp_id="kp-1f4e7ef4",
+                kp_name="Dijkstra算法",
+                review_focus=["理解深度", "逻辑连贯性"],
+                target_gap=TargetGap(
+                    gap_id="gap-mock-001",
+                    kp_id="kp-1f4e7ef4",
+                    kp_name="Dijkstra算法",
+                    weak_dimensions=["理解深度"],
+                    gap_desc="未解释贪心选择为什么在边权非负时一定成立",
+                    previous_scores={"理解深度": 4, "逻辑连贯性": 5}
+                ),
+                previous_report_summary="核心步骤正确，但缺少正确性直觉的数学解释。"
+            )
+        return None

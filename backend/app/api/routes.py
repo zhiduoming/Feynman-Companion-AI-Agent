@@ -25,10 +25,11 @@ router = APIRouter(prefix="/feynman", tags=["feynman"])
 async def greeting(
     kp_id: Optional[str] = None,
     _actor: CurrentActor = Depends(get_current_actor),
+    session_id: Optional[str] = None,
 ):
     service = get_feynman_service()
     try:
-        data = service.greeting(kp_id)
+        data = service.greeting(kp_id, session_id, _actor.user_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return GreetingResponse(

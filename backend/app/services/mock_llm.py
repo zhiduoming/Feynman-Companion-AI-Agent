@@ -24,6 +24,7 @@ class MockLLMClient:
         knowledge_point: KnowledgePoint,
         grounding_chunks: Sequence[RetrievedChunk] = (),
         profile: Optional[Any] = None,
+        review_context: Optional[Any] = None,
     ) -> FeynmanChatData:
         text = _normalize(user_input)
         user_messages = [message.content for message in messages if message.role == "user"]
@@ -36,6 +37,7 @@ class MockLLMClient:
                 max_follow_ups=max_follow_ups,
                 knowledge_point=knowledge_point,
                 profile=profile,
+                review_context=review_context,
             )
 
         coverage = _coverage(all_text)

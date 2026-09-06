@@ -139,6 +139,8 @@ class GreetingData(BaseModel):
     reply_text: str = Field(..., min_length=1)
     kp_id: str
     kp_name: str
+    is_review: bool = Field(default=False)
+    review_focus: List[str] = Field(default_factory=list)
 
 
 class GreetingResponse(BaseModel):

@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Sequence
 from backend.app.models.feynman import ChatMessage
 from backend.app.models.rag import RetrievedChunk
 from backend.app.models.user_profile import UserProfileResponse
+from backend.app.models.review_context import ReviewContext
 
 # ==========================================
 # 1. 定義痛點與階段的 Prompt 映射字典
@@ -82,7 +83,8 @@ def build_system_prompt(
     kp_name: str,
     rubric: Dict[str, Any],
     grounding_chunks: Sequence[RetrievedChunk] = (),
-    profile: Optional[UserProfileResponse] = None # 新增：接收用戶畫像
+    profile: Optional[UserProfileResponse] = None, 
+    review_context: Optional[ReviewContext] = None 
 ) -> str:
     """
     構建系統提示詞，注入個性化教學策略，並擴展 JSON 輸出結構。
@@ -90,13 +92,14 @@ def build_system_prompt(
     fixed_context = _format_grounding(grounding_chunks, source="fixed")
     rag_context = _format_grounding(grounding_chunks, source="rag")
 
-    # 調用輔助函數獲取個性化指令片段
+    # 調用輔助函數獲取個性化和复习指令片段
     personalized_section = _build_personalized_instructions(profile)
-
+    review_section = _build_review_instructions(review_context)
     return f"""
 你现在是一个零基础、但充满好奇心的小白听众。你的任务是听用户讲解「{kp_name}」，
 通过逻辑推演找出他表述中的漏洞，用提问引导用户自己发现错误。
 {personalized_section}
+{review_section}
 【后台判分基准事实，绝对禁止原文泄露给用户】
 {json.dumps(rubric, ensure_ascii=False)}
 
@@ -208,3 +211,21 @@ def build_user_prompt(
 {user_input}
 请根据规则判断下一步动作，并只返回 JSON。
 """.strip()
+# ==========================================
+# 5. 構建 Review ContextPrompt
+# ==========================================
+def _build_review_instructions(review_context: Optional[ReviewContext]) -> str:
+    """
+    根据复习上下文生成专项复习指令。如果为空则返回空字符串。
+    """
+    if not review_context:
+        return ""
+    
+    focus_str = "、".join(review_context.review_focus)
+    return f"""
+【专项复习要求（来自历史诊断）】
+- 上次漏洞描述：{review_context.target_gap.gap_desc}
+- 本次重点考察维度：{focus_str}
+- 上次薄弱维度：{", ".join(review_context.target_gap.weak_dimensions)}
+请在本次对话和评估中，重点引导用户攻克上述薄弱环节，并在追问时进行针对性检验。
+"""
